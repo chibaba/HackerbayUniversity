@@ -1,21 +1,29 @@
 const express = require('express');
 const Sequelize = require('sequelize');
-const bcrypt = require('bcrypt-nodejs');
+const bcrypt = require('bcrypt');
+const bodyParser = require('body-parser');
+
+
 
 const connection = new Sequelize('palandas', 'postgres', 'newpassword', {
   host: 'localhost',
   dialect: 'postgres'
 });
  const Conn = connection.define('conn', {
-   email : Sequelize.TEXT,
-   password: Sequelize.TEXT
+  // id : Sequelize.STRING,
+   email : Sequelize.STRING,
+   password: Sequelize.STRING 
  }, {
    hooks: {
      afterValidate:   (Conn) => {
        Conn.password = bcrypt.hashSync(Conn.password, 10);
+     },
+     afterValidate: (Conn) => {
+       Conn.email = Conn.compare(Conn.email, this.email)
+       }
      }
      }
- });
+ );
 //   id   :{
 //     primaryKey  :true,
 //     autoIncrement  :true,
@@ -34,16 +42,24 @@ const connection = new Sequelize('palandas', 'postgres', 'newpassword', {
 //     type: Sequelize.INTEGER
 //   }
 // });
+//  Conn.methods.comparePassword = (pw , cb) => {
+//    bcrypt.compare(pw, this.password, (err, isMatch) => {
+//      if (error) {
+//        return cb(err);
+//      }
+//      cb(null, isMatch)
+//    })
+//  }
 
  connection.sync({
    force: true,
    logging: console.log
  }).then(() => {
-   return Conn.create({
+   return Conn.build({
      email: 'chiba@gmail.com',
      password: 'we are here'
 
-   })
+   }).save()
 
  }).catch((error) => {
    console.log(error)
@@ -53,6 +69,8 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json())
 
 app.get('/api', (req, res) => {
   res.json({
