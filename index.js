@@ -1,6 +1,6 @@
 const express = require("express");
 const Sequelize = require("sequelize");
-passportLocalSequelize = require("passport-local-sequelize");
+const passportLocalSequelize = require("passport-local-sequelize");
 const LocalStrategy = require("passport-local").Strategy;
 const bcrypt = require("bcrypt");
 const bodyParser = require("body-parser");
@@ -18,9 +18,10 @@ const User = connection.define(
   {
     id: {
       type: Sequelize.INTEGER,
-      defaultValue: 01,
+      autoIncrement: true,
       primaryKey: true,
-      unique: true
+      unique: true,
+      allowNull: false
     },
     email: Sequelize.STRING,
     password: Sequelize.STRING
@@ -36,12 +37,12 @@ const User = connection.define(
 
 connection
   .sync({
-    force: false,
+    force: true,
     logging: console.log
   })
   .then(() => {
     return User.build({
-      id: Math.random(),
+      id: 1,
       email: "chiba@gmail.com",
       password: "we are here"
     }).save();
@@ -63,7 +64,7 @@ app.use(passport.initialize());
 
 
 // Register new user
-apiRoutes.post("/user/sign up", (req, res) => {
+apiRoutes.post("/user/signup", (req, res) => {
   if (!req.body.email || !req.body.password) {
     res.json({
       success: false,
@@ -90,6 +91,25 @@ apiRoutes.post("/user/sign up", (req, res) => {
   }
 });
 
+module.exports = function(passport) {
+  let options = {};
+  options.jwtFromRequest = ExtractJwt.fromAuthHeader();
+  options.secretOrkey = "newpassword";
+  passport.use(
+    new JwtStrategy(options, (jwt_payload, done) => {
+      User.findOne({ id: jwt_payload.id }, (err, user) => {
+        if (err) {
+          return done(err, false);
+        }
+        if (user) {
+          done(null, user);
+        } else {
+          done(null, false);
+        }
+      });
+    })
+  );
+};
 //Authenticate the user and get a JWT
 apiRoutes.post("/User/login", (req, res) => {
   User.findOne(
@@ -108,7 +128,7 @@ apiRoutes.post("/User/login", (req, res) => {
         //Check if the password matches
         if (isMatch && !err) {
           // create the token
-          var token = jwt.sign(user, config.secret, {
+          var token = jwt.sign(user, secretOrKey, {
             expiresIn: 10000080
           });
           res.json({ success: true, token: "JWT" + token });
@@ -123,70 +143,6 @@ apiRoutes.post("/User/login", (req, res) => {
   );
 });
 
-apiRoutes.post("/api/posts", verifyToken, (req, res) => {
-  jwt.verify(req.token, "secretkey", (err, authData) => {
-    if (err) {
-      res.sendStatus(403);
-    } else {
-      res.json({
-        message: "Post created",
-        authData
-      });
-    }
-  });
-});
 
-apiRoutes.post("api/login", (req, res) => {
-  //mock user
-  const user = {
-    id: 1,
-    username: "chibaba",
-    email: "chi@gmail.com"
-  };
-
-  jwt.sign({ user: user }, "password", (err, token) => {
-    token: token;
-  });
-});
-
-module.exports = function(passport) {
-  let opts = {};
-  opts.jwtFromRequest = ExtractJwt.fromAuthHeader();
-  opts.secretOrkey = config.secret;
-  passport.use(
-    new JwtStrategy(opts, (jwt_payload, done) => {
-      User.findOne({ id: jwt_payload.id }, (err, user) => {
-        if (err) {
-          return done(err, false);
-        }
-        if (user) {
-          done(null, user);
-        } else {
-          done(null, false);
-        }
-      });
-    })
-  );
-};
-
-//verifyToken
-function verifyToken(req, res, next) {
-  //Get the auth header value
-  const bearerHeader = req.headers["authorization"];
-  // check if bearer is undefined
-  if (typeof bearerHeader != "undefined") {
-    // Split at the Space
-    const bearer = bearerHeader.split(" ");
-    // Get token from array
-    const bearerToken = bearer[1];
-    //set the token
-    req.token = bearerToken;
-    //Next Middleware
-    next();
-  } else {
-    //forbidden
-    res.sendStatus(403);
-  }
-}
 
 app.listen(3000, () => console.log("Server started on port 3000"));
