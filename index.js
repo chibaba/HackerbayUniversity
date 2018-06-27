@@ -14,16 +14,19 @@ const connection = new Sequelize("palandas", "postgres", "newpassword", {
   dialect: "postgres"
 });
 const User = connection.define(
-  "user",
+  "user", 
   {
     id: {
-      type: Sequelize.INTEGER,
-      autoIncrement: true,
+      type: Sequelize.UUID,
       primaryKey: true,
-      unique: true,
-      allowNull: false
+      defaultValue: Sequelize.UUIDV4
     },
-    email: Sequelize.STRING,
+    email:  {
+          type: Sequelize.STRING,
+          isUnique: true,
+          allowNull: false,
+          isEmail: true
+         },
     password: Sequelize.STRING
   },
   {
@@ -35,6 +38,7 @@ const User = connection.define(
   }
 );
 
+
 connection
   .sync({
     force: true,
@@ -42,7 +46,6 @@ connection
   })
   .then(() => {
     return User.build({
-      id: 1,
       email: "chiba@gmail.com",
       password: "we are here"
     }).save();
@@ -77,10 +80,21 @@ apiRoutes.post("/user/signup", (req, res) => {
     });
 
     //Attempt to save the new user
+    // User.create({
+    //   username: req.body.username,
+    //   email: req.body.email,
+    //   password: password
+    // }).then(function () {
+    //   return res.status(200).json({ message: "user created" });
+    // }).catch(Sequelize.ValidationError, function (msg) {
+    //   return res.status(422).send(err.errors);
+    // }).catch(function (err) {
+    //   return res.status(400).json({ message: "issues trying to connect to database" });
+    // })
     newUser.save(err => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
+      if (err && isUniqueError) {
+        return res.catch(Sequelize.ValidationError).status(400).json({
+          
           message: "That email address already exist."
         });
       }
@@ -91,10 +105,11 @@ apiRoutes.post("/user/signup", (req, res) => {
   }
 });
 
-module.exports = function(passport) {
+const verify = (passport) => {
+
   let options = {};
   options.jwtFromRequest = ExtractJwt.fromAuthHeader();
-  options.secretOrkey = "newpassword";
+  options.secret = "newpassword";
   passport.use(
     new JwtStrategy(options, (jwt_payload, done) => {
       User.findOne({ id: jwt_payload.id }, (err, user) => {
@@ -117,7 +132,9 @@ apiRoutes.post("/User/login", (req, res) => {
       email: req.body.email
     },
     (err, user) => {
-      if (err) throw err;
+      if (err) {
+        return res.status(500).json({message: 'user not found'})
+      }
 
       if (!user) {
         res.send({
@@ -126,19 +143,19 @@ apiRoutes.post("/User/login", (req, res) => {
         });
       } else {
         //Check if the password matches
-        if (isMatch && !err) {
+        const password = User.generateHash(req.body.password);
           // create the token
-          var token = jwt.sign(user, secretOrKey, {
+          const token = jwt.sign(user, secretOrKey, {
             expiresIn: 10000080
           });
           res.json({ success: true, token: "JWT" + token });
-        } else {
+        }  {
           res.send({
             success: false,
             message: "Authentication failed. Passwords did not match"
           });
         }
-      }
+      //}
     }
   );
 });
