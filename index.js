@@ -79,18 +79,6 @@ apiRoutes.post("/user/signup", (req, res) => {
       password: req.body.password
     });
 
-    //Attempt to save the new user
-    // User.create({
-    //   username: req.body.username,
-    //   email: req.body.email,
-    //   password: password
-    // }).then(function () {
-    //   return res.status(200).json({ message: "user created" });
-    // }).catch(Sequelize.ValidationError, function (msg) {
-    //   return res.status(422).send(err.errors);
-    // }).catch(function (err) {
-    //   return res.status(400).json({ message: "issues trying to connect to database" });
-    // })
     newUser.save(err => {
       if (err && isUniqueError) {
         return res.catch(Sequelize.ValidationError).status(400).json({
@@ -131,12 +119,12 @@ apiRoutes.post("/User/login", (req, res) => {
     {
       email: req.body.email
     },
-    (err, user) => {
+    (err, User) => {
       if (err) {
         return res.status(500).json({message: 'user not found'})
       }
 
-      if (!user) {
+      if (!User) {
         res.send({
           success: false,
           message: "Authenticate failed. User not found."
@@ -155,7 +143,6 @@ apiRoutes.post("/User/login", (req, res) => {
             message: "Authentication failed. Passwords did not match"
           });
         }
-      //}
     }
   );
 });
