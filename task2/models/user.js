@@ -1,9 +1,8 @@
-//const Sequelize = require('sequelize');
 const config = require('../config/database');
+ require('../config/passport');
 const bcrypt = require('bcrypt');
 const Sequelize = require('sequelize');
 
-//module.exports = (sequelize, DataTypes) => {
   const sequelize = new Sequelize("palandas", "postgres", "newpassword", {
     host: "localhost",
    dialect: "postgres"
@@ -32,22 +31,10 @@ const User = sequelize.define(
     }
   }
 );
-// sequelize
-//   .sync({
-//     force: true,
-//     logging: console.log
-//   })
-//   .then(() => {
-//     return User.build({
-//       email: "chiba@gmail.com",
-//       password: "we are here"
-//     }).save();
-//   })
-//   .catch(error => {
-//     console.log(error);
-//   });
-//   return User
-//}
+
+
+
+
 
 module.exports = User ;
 
@@ -55,7 +42,7 @@ module.exports.getUserById = (id, cb) => {
   User.findById(id, cb);
 }
 module.exports.getUserByEmail = (email, cb) => {
-  User.findAll({email:email}, cb);
+  User.findOne({email:email}, cb);
 }
 module.exports.createUser = (newUser, cb) => {
   bcrypt.genSalt(10, (err, salt)=>{

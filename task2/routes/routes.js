@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config/database');
 const User = require('../models/user');
 module.exports = (app, passport) => {
-  app.get('/', (req, res) => {
+  app.get('/about', (req, res) => {
     res.json('welcome to authenticating jwt')
   });
   app.post('/signup', (req, res) => {
@@ -20,7 +20,7 @@ module.exports = (app, passport) => {
 
     });
   });
-  app.post('/login', (req, res) => {
+  app.post('/login', passport.authenticate('local'), (req, res) => {
     let email = req.body.email;
     let password = req.body.password;
     User.getUserByEmail(email, (err, user) => {
@@ -35,8 +35,7 @@ module.exports = (app, passport) => {
           const token = jwt.sign(user,'newpassword', {expiresIn:600000000});
           res.json({success:true, token:token, user:{
             id: user._id,
-            email: user.email,
-            password:user.password
+            email: user.email
           }});
         } else {
           return  res.status(500).json({success:false, message:'sequelizeValidationError'})
@@ -49,7 +48,7 @@ module.exports = (app, passport) => {
   });
   app.get('/logout', (req, res) => {
     req.logout();
-    res.redirect('/');
+    res.redirect('/about');
   })
 }
 
